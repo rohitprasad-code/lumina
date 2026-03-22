@@ -24,8 +24,8 @@ program
       } else {
         console.log(result);
       }
-    } catch (error) {
-      console.error('CLI Error:', error);
+    } catch (error: any) {
+      console.error(error.message || error);
       process.exit(1);
     }
   });

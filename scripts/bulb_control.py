@@ -99,9 +99,23 @@ def main():
             result["value"] = val
         elif args.action == "color":
             if not args.value:
-                raise ValueError("Color hex value required (e.g., #FF0000)")
+                raise ValueError("Color hex value required (e.g., FF0000)")
+            
+            # Remove optional # character
             color_hex = args.value.lstrip('#')
-            d.set_colour_hex(color_hex)
+            
+            if len(color_hex) != 6:
+                raise ValueError(f"Invalid color hex format '{args.value}'. Expected 6 characters (e.g., FF0000).")
+                
+            try:
+                # Convert hex to RGB values
+                r = int(color_hex[0:2], 16)
+                g = int(color_hex[2:4], 16)
+                b = int(color_hex[4:6], 16)
+            except ValueError:
+                raise ValueError(f"Invalid hex characters in color '{args.value}'.")
+                
+            d.set_colour(r, g, b)
             result["value"] = args.value
             
         if args.json:

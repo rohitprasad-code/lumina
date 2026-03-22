@@ -34,7 +34,14 @@ export async function runBulbCommand(command: string, value?: string, options: {
         // Fallback to regular error
       }
     }
-    console.error(`Failed to execute bulb command: ${error}`);
+    
+    // If the python script returned a clean error message in stdout, throw that
+    if (error.stdout && error.stdout.trim().length > 0) {
+      throw new Error(error.stdout.trim());
+    } else if (error.stderr && error.stderr.trim().length > 0) {
+      throw new Error(error.stderr.trim());
+    }
+    
     throw error;
   }
 }
