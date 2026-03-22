@@ -1,6 +1,6 @@
-# Wipro Smart Bulb — AI Agent
+# Lumina — AI Agent
 
-> Control your **Wipro Smart Wi-Fi Bulb (12W)** via direct CLI commands or natural language.
+> Control your smart devices via direct CLI commands or natural language.
 > Two lanes, one entry point. Runs fully local via Ollama. Extensible to Telegram & WhatsApp.
 
 ---
