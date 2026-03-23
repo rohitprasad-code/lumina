@@ -1,0 +1,103 @@
+import ollama, { Message as OllamaMessage } from 'ollama';
+import { bulbTools } from './model/tools/definitions';
+import { executeTool } from './model/tools/executor';
+
+import ora from 'ora';
+
+const DEFAULT_SYSTEM_PROMPT = `
+You are Lumina, an intelligent assistant that controls smart home devices.
+Use the provided tools to interact with physical hardware.
+
+If the user asks you to do something with their lights, immediately use the 'run_bulb_command' tool.
+Do not ask for permission, just execute the tool.
+Once the tool returns a success result, give a short, friendly confirmation to the user.
+If the tool returns an error, inform the user about what went wrong.
+`;
+
+export class AgentLoop {
+  private messages: OllamaMessage[] = [];
+  
+  constructor() {
+    this.messages.push({
+      role: 'system',
+      content: DEFAULT_SYSTEM_PROMPT.trim()
+    });
+  }
+
+  public async processUserInput(input: string): Promise<void> {
+    this.messages.push({ role: 'user', content: input });
+    await this.runLoop();
+  }
+
+  /**
+   * The core agentic loop: query model -> run requested tools -> report tool results -> query model again
+   */
+  private async runLoop(): Promise<void> {
+    const spinner = ora().start();
+
+    try {
+      const responseStream = await ollama.chat({
+        model: 'qwen3.5:latest',
+        messages: this.messages,
+        tools: bulbTools,
+        stream: true
+      });
+
+      let fullContent = '';
+      let isTyping = false;
+      const finalToolCalls: any[] = [];
+
+      for await (const chunk of responseStream) {
+        if (spinner.isSpinning) {
+          spinner.stop();
+        }
+
+        if (chunk.message.content) {
+          if (!isTyping) {
+            process.stdout.write('\n> Lumina: ');
+            isTyping = true;
+          }
+          process.stdout.write(chunk.message.content);
+          fullContent += chunk.message.content;
+        }
+
+        if (chunk.message.tool_calls && chunk.message.tool_calls.length > 0) {
+          chunk.message.tool_calls.forEach(tc => finalToolCalls.push(tc));
+        }
+      }
+
+      if (isTyping) {
+        console.log(); // Complete the printed line
+      } else if (spinner.isSpinning) {
+        // In case it finished without printing text (just tool calls)
+        spinner.stop();
+      }
+
+      // Reconstruct the message
+      const msg: OllamaMessage & { tool_calls?: any[] } = {
+        role: 'assistant',
+        content: fullContent
+      };
+      
+      if (finalToolCalls.length > 0) {
+        msg.tool_calls = finalToolCalls;
+      }
+      
+      this.messages.push(msg);
+
+      if (msg.tool_calls) {
+        for (const tool of msg.tool_calls) {
+          const toolResult = await executeTool(tool);
+          this.messages.push({
+            role: 'tool',
+            content: JSON.stringify(toolResult)
+          });
+        }
+        await this.runLoop(); // Recurse
+      }
+    } catch (e: any) {
+      if (spinner.isSpinning) spinner.stop();
+      console.error('\nLumina Error:', e.message || e);
+    }
+  }
+}

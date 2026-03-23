@@ -1,23 +1,56 @@
 #!/usr/bin/env npx tsx
 import { Command } from 'commander';
-import { runBulbCommand } from '../util/tinytuya';
+import { runBulbCommand, scanDevices } from '../util/tinytuya';
+import { AgentLoop } from '../agent';
 
 const program = new Command();
 
 program
   .name('lumina-cli')
   .description('CLI to control smart bulbs and other devices')
-  .version('0.1.0');
+  .option('-m, --message <text>', 'natural language message to control the device')
+  .option('-d, --device <name>', 'specific device ID or name')
+  .option('-s, --scan', 'scan for devices')
+  .version('0.1.0')
+  .action(async (options) => {
+    if (options.scan) {
+      await scanDevices();
+      return;
+    }
+
+    if (options.message) {
+      const target = options.device ? ` for device: ${options.device}` : '';
+      console.log(`> Processing message: "${options.message}"${target}\n`);
+
+      const loop = new AgentLoop();
+      await loop.processUserInput(options.message);
+    } else {
+      program.help();
+    }
+  });
 
 program
   .command('bulb')
   .description('Control smart bulbs')
-  .argument('<action>', 'Action to perform (on, off, toggle, status, brightness, color)')
+  .argument('[action]', 'Action to perform (on, off, toggle, status, brightness, color)')
   .argument('[value]', 'Value for brightness (1-100) or color (hex)')
   .option('-d, --device <name>', 'Specific device ID or Name')
   .option('-j, --json', 'Output results as JSON')
+  .option('-m, --message <text>', 'Natural language message to control the bulb')
   .action(async (action, value, options) => {
     try {
+      if (options.message) {
+        console.log(`Processing message: "${options.message}"\n`);
+        const loop = new AgentLoop();
+        await loop.processUserInput(options.message);
+        return;
+      }
+
+      if (!action) {
+        console.error("error: missing required argument 'action'");
+        process.exit(1);
+      }
+
       const result = await runBulbCommand(action, value, options);
       if (options.json) {
         console.log(JSON.stringify(result, null, 2));
