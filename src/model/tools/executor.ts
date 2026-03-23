@@ -7,14 +7,13 @@ import { runBulbCommand } from '../../util/tinytuya';
 export async function executeTool(toolCall: ToolCall): Promise<any> {
   const name = toolCall.function.name;
   const args = toolCall.function.arguments;
-  
-  console.log(`\n⚙️  Agent is executing physical tool: ${name}(${JSON.stringify(args)})`);
+
+  console.log(`⚙️ Agent is executing physical tool: ${name}(${JSON.stringify(args)})`);
 
   if (name === 'run_bulb_command') {
     try {
       const action = args.action;
       const value = args.value;
-      
       const options = {
         json: true,
         device: args.device

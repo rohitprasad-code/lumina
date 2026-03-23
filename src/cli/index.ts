@@ -20,8 +20,8 @@ program
 
     if (options.message) {
       const target = options.device ? ` for device: ${options.device}` : '';
-      console.log(`Processing message: "${options.message}"${target}\n`);
-      
+      console.log(`> Processing message: "${options.message}"${target}\n`);
+
       const loop = new AgentLoop();
       await loop.processUserInput(options.message);
     } else {
