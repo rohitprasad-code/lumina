@@ -2,7 +2,7 @@ import ollama, { Message as OllamaMessage } from 'ollama';
 
 export type { OllamaMessage };
 
-export async function chatCompletion(messages: OllamaMessage[], model: string = 'llama3.2'): Promise<string> {
+export async function chatCompletion(messages: OllamaMessage[], model: string = 'qwen3.5:latest'): Promise<string> {
   try {
     const response = await ollama.chat({
       model,

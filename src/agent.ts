@@ -35,7 +35,7 @@ export class AgentLoop {
    */
   private async runLoop(): Promise<void> {
     const response = await ollama.chat({
-      model: 'llama3.2', // Target local model
+      model: 'qwen3.5:latest', // Target installed local model
       messages: this.messages,
       tools: bulbTools,
       stream: false
