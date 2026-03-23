@@ -45,3 +45,21 @@ export async function runBulbCommand(command: string, value?: string, options: {
     throw error;
   }
 }
+export async function scanDevices() {
+  console.log('Scanning for Tuya devices on the local network... (this may take a moment)');
+  
+  const venvPath = join(process.cwd(), '.venv', 'bin', 'python');
+  const pythonCmd = existsSync(venvPath) ? venvPath : 'python3';
+
+  try {
+    const configDir = join(process.cwd(), 'config');
+    
+    // Run the scan from inside the config directory so any generated files stay there
+    const { stdout, stderr } = await execAsync(`${pythonCmd} -m tinytuya scan`, { cwd: configDir });
+    if (stderr && !stderr.includes('Scanning')) console.error(stderr);
+    console.log(stdout);
+  } catch (error: any) {
+    console.error('Error scanning devices:', error.message || error);
+    process.exit(1);
+  }
+}
