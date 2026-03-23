@@ -1,6 +1,7 @@
 #!/usr/bin/env npx tsx
 import { Command } from 'commander';
 import { runBulbCommand, scanDevices } from '../util/tinytuya';
+import { AgentLoop } from '../agent';
 
 const program = new Command();
 
@@ -18,9 +19,11 @@ program
     }
 
     if (options.message) {
-      const target = options.device ? `device: ${options.device}` : 'all devices';
-      console.log(`Processing Global message: "${options.message}" for ${target}`);
-      // TODO: Pass to AI agent
+      const target = options.device ? ` for device: ${options.device}` : '';
+      console.log(`Processing message: "${options.message}"${target}\n`);
+      
+      const loop = new AgentLoop();
+      await loop.processUserInput(options.message);
     } else {
       program.help();
     }
@@ -37,8 +40,9 @@ program
   .action(async (action, value, options) => {
     try {
       if (options.message) {
-        console.log(`Processing message: "${options.message}"`);
-        // TODO: Pass to AI agent
+        console.log(`Processing message: "${options.message}"\n`);
+        const loop = new AgentLoop();
+        await loop.processUserInput(options.message);
         return;
       }
 
