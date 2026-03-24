@@ -49,4 +49,4 @@ next-env.d.ts
 .logs/*
 
 # Tuya / Local Configs (contains keys/secrets)
-config/*.json
+config/*
