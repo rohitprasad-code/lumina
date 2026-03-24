@@ -7,7 +7,7 @@ import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
 import { spawn } from 'child_process';
 import { CONFIG_DIR, PROJECT_ROOT } from '../util/paths';
 
-const PID_FILE = join(CONFIG_DIR, 'lumina-cron.pid');
+const PID_FILE = join(CONFIG_DIR, 'cron-pid.json');
 
 const program = new Command();
 
@@ -87,13 +87,15 @@ cron
   .option("-f, --foreground", "Run in the foreground (standard output)")
   .action(async (options) => {
     if (existsSync(PID_FILE)) {
-      const pid = parseInt(readFileSync(PID_FILE, 'utf-8'));
       try {
+        const pidData = JSON.parse(readFileSync(PID_FILE, 'utf-8'));
+        const pid = pidData.pid;
         process.kill(pid, 0); // Check if alive
-        console.error(`❌ Scheduler is already running (PID: ${pid}).`);
+        console.error(`❌ Scheduler is already running (PID: ${pid}, Started: ${pidData.startTime}).`);
         return;
       } catch {
-        unlinkSync(PID_FILE); // Stale PID
+        // Stale or invalid JSON
+        unlinkSync(PID_FILE);
       }
     }
 
@@ -106,7 +108,7 @@ cron
     }
 
     // Detached background process
-    const child = spawn('npx', ['tsx', 'src/test-cron.ts'], {
+    const child = spawn('npx', ['tsx', 'src/service/runner.ts'], {
       cwd: PROJECT_ROOT,
       detached: true,
       stdio: 'ignore'
@@ -114,7 +116,11 @@ cron
 
     child.unref();
     if (child.pid) {
-      writeFileSync(PID_FILE, child.pid.toString());
+      const pidData = {
+        pid: child.pid,
+        startTime: new Date().toISOString()
+      };
+      writeFileSync(PID_FILE, JSON.stringify(pidData, null, 2));
       console.log(`🚀 Scheduler started in background (PID: ${child.pid}).`);
     } else {
       console.error('❌ Failed to start background process.');
@@ -130,14 +136,20 @@ cron
       return;
     }
 
-    const pid = parseInt(readFileSync(PID_FILE, 'utf-8'));
     try {
+      const pidData = JSON.parse(readFileSync(PID_FILE, 'utf-8'));
+      const pid = pidData.pid;
       process.kill(pid, 'SIGINT');
       unlinkSync(PID_FILE);
       console.log(`✅ Scheduler (PID: ${pid}) stopped.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`❌ Failed to stop process ${pid}: ${message}`);
+      console.error(`❌ Failed to stop process: ${message}`);
+      // If reading JSON failed, we might want to suggest manual cleanup
+      if (error instanceof SyntaxError) {
+        unlinkSync(PID_FILE);
+        console.log('⚠️ Removed invalid PID file.');
+      }
     }
   });
 
@@ -150,12 +162,13 @@ cron
       return;
     }
 
-    const pid = parseInt(readFileSync(PID_FILE, 'utf-8'));
     try {
+      const pidData = JSON.parse(readFileSync(PID_FILE, 'utf-8'));
+      const pid = pidData.pid;
       process.kill(pid, 0);
-      console.log(`🟢 Scheduler is running (PID: ${pid}).`);
+      console.log(`🟢 Scheduler is running (PID: ${pid}, Started: ${pidData.startTime}).`);
     } catch {
-      console.log('🔴 Scheduler is NOT running (found stale PID file).');
+      console.log('🔴 Scheduler is NOT running (found stale or invalid PID file).');
     }
   });
 
