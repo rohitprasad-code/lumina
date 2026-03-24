@@ -72,8 +72,9 @@ program
       } else {
         console.log(result);
       }
-    } catch (error: any) {
-      console.error(error.message || error);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(message);
       process.exit(1);
     }
   });
@@ -117,6 +118,26 @@ cron
       console.log(`🚀 Scheduler started in background (PID: ${child.pid}).`);
     } else {
       console.error('❌ Failed to start background process.');
+    }
+  });
+
+cron
+  .command("stop")
+  .description("Stop the background scheduler")
+  .action(() => {
+    if (!existsSync(PID_FILE)) {
+      console.error('❌ No scheduler is currently running.');
+      return;
+    }
+
+    const pid = parseInt(readFileSync(PID_FILE, 'utf-8'));
+    try {
+      process.kill(pid, 'SIGINT');
+      unlinkSync(PID_FILE);
+      console.log(`✅ Scheduler (PID: ${pid}) stopped.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Failed to stop process ${pid}: ${message}`);
     }
   });
 

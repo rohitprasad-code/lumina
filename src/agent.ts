@@ -1,4 +1,4 @@
-import ollama, { Message as OllamaMessage } from 'ollama';
+import ollama, { Message as OllamaMessage, ToolCall } from 'ollama';
 import { bulbTools } from './model/tools/definitions';
 import { executeTool } from './model/tools/executor';
 
@@ -45,7 +45,7 @@ export class AgentLoop {
 
       let fullContent = '';
       let isTyping = false;
-      const finalToolCalls: any[] = [];
+      const finalToolCalls: ToolCall[] = [];
 
       for await (const chunk of responseStream) {
         if (spinner.isSpinning) {
@@ -74,7 +74,7 @@ export class AgentLoop {
       }
 
       // Reconstruct the message
-      const msg: OllamaMessage & { tool_calls?: any[] } = {
+      const msg: OllamaMessage & { tool_calls?: ToolCall[] } = {
         role: 'assistant',
         content: fullContent
       };
@@ -95,9 +95,10 @@ export class AgentLoop {
         }
         await this.runLoop(); // Recurse
       }
-    } catch (e: any) {
+    } catch (e) {
       if (spinner.isSpinning) spinner.stop();
-      console.error('\nLumina Error:', e.message || e);
+      const message = e instanceof Error ? e.message : String(e);
+      console.error('\nLumina Error:', message);
     }
   }
 }

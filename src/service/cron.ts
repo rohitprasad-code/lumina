@@ -2,11 +2,12 @@ import cron, { ScheduledTask } from "node-cron";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { executeTool } from "../model/tools/executor";
+import { ToolCall } from "ollama";
 import { CONFIG_DIR } from "../util/paths";
 
 interface AutomationAction {
   tool: string;
-  arguments: any;
+  arguments: Record<string, unknown>;
 }
 
 interface Automation {
@@ -42,8 +43,9 @@ export class CronManager {
       }
 
       console.log(`✅ Loaded ${this.tasks.size} automations.`);
-    } catch (error: any) {
-      console.error(`❌ Failed to load automations: ${error.message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Failed to load automations: ${message}`);
     }
   }
 
@@ -63,14 +65,22 @@ export class CronManager {
             },
           };
 
-          const result = await executeTool(toolCall as any);
+          const result = await executeTool(toolCall as unknown as ToolCall);
           console.log(`   - Result (${action.tool}):`, result);
-        } catch (error: any) {
-          console.error(`   - Error (${action.tool}):`, error.message);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`   - Error (${action.tool}): ${message}`);
         }
       }
     });
 
     this.tasks.set(automation.id, task);
+  }
+
+  public stopAll(): void {
+    for (const task of this.tasks.values()) {
+      task.stop();
+    }
+    this.tasks.clear();
   }
 }

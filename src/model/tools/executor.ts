@@ -4,7 +4,7 @@ import { runBulbCommand } from '../../util/tinytuya';
 /**
  * Execute a tool call requested by Ollama and return its JSON result.
  */
-export async function executeTool(toolCall: ToolCall): Promise<any> {
+export async function executeTool(toolCall: ToolCall): Promise<unknown> {
   const name = toolCall.function.name;
   const args = toolCall.function.arguments;
 
@@ -22,8 +22,9 @@ export async function executeTool(toolCall: ToolCall): Promise<any> {
       // We pass the json: true flag to runBulbCommand so we get a structured response back for the LLM
       const result = await runBulbCommand(action, value, options);
       return result;
-    } catch (e: any) {
-      return { error: e.message || 'Unknown execution error' };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown execution error';
+      return { error: message };
     }
   }
   
