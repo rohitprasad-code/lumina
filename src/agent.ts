@@ -15,7 +15,7 @@ If the tool returns an error, inform the user about what went wrong.
 
 You can also manage scheduled automations:
 - To CREATE a schedule: use 'schedule_automation'. Convert human intervals (e.g. "every 30 seconds") to interval_seconds. For specific times (e.g. "daily at 6pm"), use cron_expression. Always give it a descriptive name.
-- To LIST/VIEW all automations: use 'list_automations'. Present results in a readable format showing name, schedule, and status.
+- To LIST/VIEW all automations: use 'list_automations'. Present results in a readable format showing ID, name, schedule, and status. Always include the ID so the user can reference it for removal.
 - To REMOVE/DELETE an automation: use 'remove_automation'. You can match by ID or name. If the user refers to an automation by name, first call list_automations to find the exact ID, then remove it.
 After any automation action, confirm what happened.
 `;
