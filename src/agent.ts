@@ -1,5 +1,5 @@
 import ollama, { Message as OllamaMessage, ToolCall } from 'ollama';
-import { bulbTools } from './model/tools/definitions';
+import { allTools } from './model/tools/definitions';
 import { executeTool } from './model/tools/executor';
 
 import ora from 'ora';
@@ -12,6 +12,12 @@ If the user asks you to do something with their lights, immediately use the 'run
 Do not ask for permission, just execute the tool.
 Once the tool returns a success result, give a short, friendly confirmation to the user.
 If the tool returns an error, inform the user about what went wrong.
+
+You can also create scheduled automations. If the user asks to schedule, repeat, or automate an action (e.g. "schedule toggle every 30 seconds", "turn off lights every day at 6pm"), use the 'schedule_automation' tool.
+- For simple repeating intervals like "every 30 seconds" or "every 5 minutes", convert to seconds and pass interval_seconds.
+- For specific times like "every day at 6pm", use a 6-field cron expression in cron_expression.
+- Always give the automation a short, descriptive name.
+After creating the schedule, confirm what was created and how often it will run.
 `;
 
 export class AgentLoop {
@@ -39,7 +45,7 @@ export class AgentLoop {
       const responseStream = await ollama.chat({
         model: 'qwen3.5:latest',
         messages: this.messages,
-        tools: bulbTools,
+        tools: allTools,
         stream: true
       });
 

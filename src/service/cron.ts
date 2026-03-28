@@ -83,4 +83,13 @@ export class CronManager {
     }
     this.tasks.clear();
   }
+
+  /**
+   * Hot-reload: stop all running tasks and re-read automations from disk.
+   */
+  public async reload(): Promise<void> {
+    console.log('🔄 Reloading automations from disk...');
+    this.stopAll();
+    await this.init();
+  }
 }

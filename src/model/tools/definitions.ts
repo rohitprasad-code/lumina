@@ -32,3 +32,44 @@ export const bulbTools: Tool[] = [
     }
   }
 ];
+
+/**
+ * Tool schema for creating scheduled automations (cron jobs) via natural language.
+ */
+export const schedulingTools: Tool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'schedule_automation',
+      description: 'Create a new scheduled automation (cron job) that repeats a smart home action at a given interval. Use this when the user asks to schedule, repeat, or automate a device action on a timer.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: 'The device action to schedule: "on", "off", or "toggle".',
+            enum: ['on', 'off', 'toggle']
+          },
+          interval_seconds: {
+            type: 'number',
+            description: 'How often to repeat the action, in seconds. For example, 30 means every 30 seconds, 300 means every 5 minutes, 3600 means every hour. Use this for simple repeating intervals.'
+          },
+          cron_expression: {
+            type: 'string',
+            description: 'A cron expression for advanced/specific schedules (6-field format: second minute hour dayOfMonth month dayOfWeek). Only use this if interval_seconds is not sufficient, e.g. "0 0 18 * * *" for every day at 6 PM.'
+          },
+          name: {
+            type: 'string',
+            description: 'A short, friendly name for this automation, e.g. "Evening lights off".'
+          }
+        },
+        required: ['action']
+      }
+    }
+  }
+];
+
+/**
+ * Combined set of all tools available to the agent.
+ */
+export const allTools: Tool[] = [...bulbTools, ...schedulingTools];
