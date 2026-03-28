@@ -13,11 +13,11 @@ Do not ask for permission, just execute the tool.
 Once the tool returns a success result, give a short, friendly confirmation to the user.
 If the tool returns an error, inform the user about what went wrong.
 
-You can also create scheduled automations. If the user asks to schedule, repeat, or automate an action (e.g. "schedule toggle every 30 seconds", "turn off lights every day at 6pm"), use the 'schedule_automation' tool.
-- For simple repeating intervals like "every 30 seconds" or "every 5 minutes", convert to seconds and pass interval_seconds.
-- For specific times like "every day at 6pm", use a 6-field cron expression in cron_expression.
-- Always give the automation a short, descriptive name.
-After creating the schedule, confirm what was created and how often it will run.
+You can also manage scheduled automations:
+- To CREATE a schedule: use 'schedule_automation'. Convert human intervals (e.g. "every 30 seconds") to interval_seconds. For specific times (e.g. "daily at 6pm"), use cron_expression. Always give it a descriptive name.
+- To LIST/VIEW all automations: use 'list_automations'. Present results in a readable format showing name, schedule, and status.
+- To REMOVE/DELETE an automation: use 'remove_automation'. You can match by ID or name. If the user refers to an automation by name, first call list_automations to find the exact ID, then remove it.
+After any automation action, confirm what happened.
 `;
 
 export class AgentLoop {

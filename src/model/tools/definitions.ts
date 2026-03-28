@@ -34,7 +34,7 @@ export const bulbTools: Tool[] = [
 ];
 
 /**
- * Tool schema for creating scheduled automations (cron jobs) via natural language.
+ * Tool schemas for managing scheduled automations (cron jobs) via natural language.
  */
 export const schedulingTools: Tool[] = [
   {
@@ -64,6 +64,39 @@ export const schedulingTools: Tool[] = [
           }
         },
         required: ['action']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_automations',
+      description: 'List all existing scheduled automations. Use this when the user asks to see, show, view, or list their automations, schedules, or cron jobs.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: []
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remove_automation',
+      description: 'Remove/delete an existing scheduled automation by its ID or name. Use this when the user asks to remove, delete, cancel, or stop a specific automation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The exact ID of the automation to remove (e.g. "auto-1711648231000"). Use this if you know the ID from a previous list_automations call.'
+          },
+          name: {
+            type: 'string',
+            description: 'The name of the automation to remove. If multiple automations share the same name, the first match will be removed.'
+          }
+        },
+        required: []
       }
     }
   }
