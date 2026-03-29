@@ -24,80 +24,42 @@ export class AgentLoop {
     });
   }
 
-  public async processUserInput(input: string): Promise<void> {
+  public async processUserInput(input: string): Promise<string> {
     this.messages.push({ role: 'user', content: input });
-    await this.runLoop();
+    return await this.runLoop();
   }
 
   /**
    * The core agentic loop: query model -> run requested tools -> report tool results -> query model again
    */
-  private async runLoop(): Promise<void> {
-    const spinner = ora().start();
-
+  private async runLoop(): Promise<string> {
     try {
-      const responseStream = await ollama.chat({
+      const response = await ollama.chat({
         model: 'qwen3.5:latest',
         messages: this.messages,
         tools: bulbTools,
-        stream: true
       });
 
-      let fullContent = '';
-      let isTyping = false;
-      const finalToolCalls: any[] = [];
+      const assistantMessage = response.message;
+      this.messages.push(assistantMessage);
 
-      for await (const chunk of responseStream) {
-        if (spinner.isSpinning) {
-          spinner.stop();
-        }
-
-        if (chunk.message.content) {
-          if (!isTyping) {
-            process.stdout.write('\n> Lumina: ');
-            isTyping = true;
-          }
-          process.stdout.write(chunk.message.content);
-          fullContent += chunk.message.content;
-        }
-
-        if (chunk.message.tool_calls && chunk.message.tool_calls.length > 0) {
-          chunk.message.tool_calls.forEach(tc => finalToolCalls.push(tc));
-        }
-      }
-
-      if (isTyping) {
-        console.log(); // Complete the printed line
-      } else if (spinner.isSpinning) {
-        // In case it finished without printing text (just tool calls)
-        spinner.stop();
-      }
-
-      // Reconstruct the message
-      const msg: OllamaMessage & { tool_calls?: any[] } = {
-        role: 'assistant',
-        content: fullContent
-      };
-      
-      if (finalToolCalls.length > 0) {
-        msg.tool_calls = finalToolCalls;
-      }
-      
-      this.messages.push(msg);
-
-      if (msg.tool_calls) {
-        for (const tool of msg.tool_calls) {
+      // If there are tool calls, execute them and recurse
+      if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+        for (const tool of assistantMessage.tool_calls) {
           const toolResult = await executeTool(tool);
           this.messages.push({
             role: 'tool',
             content: JSON.stringify(toolResult)
           });
         }
-        await this.runLoop(); // Recurse
+        return await this.runLoop(); // Recurse to get the final textual response
       }
+
+      // Return the final text content
+      return assistantMessage.content || 'Action completed.';
     } catch (e: any) {
-      if (spinner.isSpinning) spinner.stop();
       console.error('\nLumina Error:', e.message || e);
+      return `Error: ${e.message || 'An unexpected error occurred.'}`;
     }
   }
 }
