@@ -1,7 +1,13 @@
 #!/usr/bin/env npx tsx
 import { Command } from 'commander';
 import { runBulbCommand, scanDevices } from '../util/tinytuya';
-import { AgentLoop } from '../agent';
+import { handleMessage } from '../integrations/router';
+import { startTelegramBot } from '../integrations/telegram';
+import * as dotenv from 'dotenv';
+import { resolve } from 'path';
+
+// Load environment variables from .env.local
+dotenv.config({ path: resolve(process.cwd(), '.env.local'), quiet: true });
 
 const program = new Command();
 
@@ -22,8 +28,8 @@ program
       const target = options.device ? ` for device: ${options.device}` : '';
       console.log(`> Processing message: "${options.message}"${target}\n`);
 
-      const loop = new AgentLoop();
-      await loop.processUserInput(options.message);
+      const response = await handleMessage(options.message);
+      console.log(`\n> Lumina: ${response}`);
     } else {
       program.help();
     }
@@ -41,8 +47,8 @@ program
     try {
       if (options.message) {
         console.log(`Processing message: "${options.message}"\n`);
-        const loop = new AgentLoop();
-        await loop.processUserInput(options.message);
+        const response = await handleMessage(options.message);
+        console.log(`\n> Lumina: ${response}`);
         return;
       }
 
@@ -59,6 +65,18 @@ program
       }
     } catch (error: any) {
       console.error(error.message || error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('telegram')
+  .description('Start the Telegram bot listener')
+  .action(async () => {
+    try {
+      await startTelegramBot();
+    } catch (error: any) {
+      console.error('Telegram Bot Error:', error.message || error);
       process.exit(1);
     }
   });
