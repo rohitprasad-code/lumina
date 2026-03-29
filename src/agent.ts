@@ -30,19 +30,17 @@ export class AgentLoop {
     });
   }
 
-  public async processUserInput(input: string): Promise<void> {
+  public async processUserInput(input: string): Promise<string> {
     this.messages.push({ role: 'user', content: input });
-    await this.runLoop();
+    return await this.runLoop();
   }
 
   /**
    * The core agentic loop: query model -> run requested tools -> report tool results -> query model again
    */
-  private async runLoop(): Promise<void> {
-    const spinner = ora().start();
-
+  private async runLoop(): Promise<string> {
     try {
-      const responseStream = await ollama.chat({
+      const response = await ollama.chat({
         model: 'qwen3.5:latest',
         messages: this.messages,
         tools: allTools,
@@ -52,8 +50,9 @@ export class AgentLoop {
       let fullContent = '';
       let isTyping = false;
       const finalToolCalls: ToolCall[] = [];
+      const spinner = ora('Lumina is thinking...').start();
 
-      for await (const chunk of responseStream) {
+      for await (const chunk of response) {
         if (spinner.isSpinning) {
           spinner.stop();
         }
@@ -91,7 +90,8 @@ export class AgentLoop {
       
       this.messages.push(msg);
 
-      if (msg.tool_calls) {
+      // If there are tool calls, execute them and recurse
+      if (msg.tool_calls && msg.tool_calls.length > 0) {
         for (const tool of msg.tool_calls) {
           const toolResult = await executeTool(tool);
           this.messages.push({
@@ -99,12 +99,15 @@ export class AgentLoop {
             content: JSON.stringify(toolResult)
           });
         }
-        await this.runLoop(); // Recurse
+        return await this.runLoop(); // Recurse to get the final textual response
       }
-    } catch (e) {
-      if (spinner.isSpinning) spinner.stop();
+
+      // Return the final text content
+      return fullContent || 'Action completed.';
+    } catch (e: any) {
       const message = e instanceof Error ? e.message : String(e);
       console.error('\nLumina Error:', message);
+      return `Error: ${message || 'An unexpected error occurred.'}`;
     }
   }
 }

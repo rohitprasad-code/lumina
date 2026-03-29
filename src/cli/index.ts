@@ -2,10 +2,16 @@
 import { Command } from "commander";
 import { runBulbCommand, scanDevices } from "../util/tinytuya";
 import { AgentLoop } from "../agent";
-import { join } from 'path';
+import { handleMessage } from '../integrations/router';
+import { startTelegramBot } from '../integrations/telegram';
+import { join, resolve } from 'path';
 import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
 import { spawn } from 'child_process';
 import { CONFIG_DIR, PROJECT_ROOT } from '../util/paths';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env.local
+dotenv.config({ path: resolve(process.cwd(), '.env.local'), quiet: true });
 
 const PID_FILE = join(CONFIG_DIR, 'cron-pid.json');
 
@@ -31,8 +37,8 @@ program
       const target = options.device ? ` for device: ${options.device}` : "";
       console.log(`> Processing message: "${options.message}"${target}\n`);
 
-      const loop = new AgentLoop();
-      await loop.processUserInput(options.message);
+      const response = await handleMessage(options.message);
+      console.log(`\n> Lumina: ${response}`);
     } else {
       program.help();
     }
@@ -56,8 +62,8 @@ program
     try {
       if (options.message) {
         console.log(`Processing message: "${options.message}"\n`);
-        const loop = new AgentLoop();
-        await loop.processUserInput(options.message);
+        const response = await handleMessage(options.message);
+        console.log(`\n> Lumina: ${response}`);
         return;
       }
 
@@ -169,6 +175,18 @@ cron
       console.log(`🟢 Scheduler is running (PID: ${pid}, Started: ${pidData.startTime}).`);
     } catch {
       console.log('🔴 Scheduler is NOT running (found stale or invalid PID file).');
+    }
+  });
+
+program
+  .command('telegram')
+  .description('Start the Telegram bot listener')
+  .action(async () => {
+    try {
+      await startTelegramBot();
+    } catch (error: any) {
+      console.error('Telegram Bot Error:', error.message || error);
+      process.exit(1);
     }
   });
 
