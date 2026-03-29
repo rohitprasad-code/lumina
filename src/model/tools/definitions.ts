@@ -32,3 +32,77 @@ export const bulbTools: Tool[] = [
     }
   }
 ];
+
+/**
+ * Tool schemas for managing scheduled automations (cron jobs) via natural language.
+ */
+export const schedulingTools: Tool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'schedule_automation',
+      description: 'Create a new scheduled automation (cron job) that repeats a smart home action at a given interval. Use this when the user asks to schedule, repeat, or automate a device action on a timer.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: 'The device action to schedule: "on", "off", or "toggle".',
+            enum: ['on', 'off', 'toggle']
+          },
+          interval_seconds: {
+            type: 'number',
+            description: 'How often to repeat the action, in seconds. For example, 30 means every 30 seconds, 300 means every 5 minutes, 3600 means every hour. Use this for simple repeating intervals.'
+          },
+          cron_expression: {
+            type: 'string',
+            description: 'A cron expression for advanced/specific schedules (6-field format: second minute hour dayOfMonth month dayOfWeek). Only use this if interval_seconds is not sufficient, e.g. "0 0 18 * * *" for every day at 6 PM.'
+          },
+          name: {
+            type: 'string',
+            description: 'A short, friendly name for this automation, e.g. "Evening lights off".'
+          }
+        },
+        required: ['action']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_automations',
+      description: 'List all existing scheduled automations. Use this when the user asks to see, show, view, or list their automations, schedules, or cron jobs.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: []
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remove_automation',
+      description: 'Remove/delete an existing scheduled automation by its ID or name. Use this when the user asks to remove, delete, cancel, or stop a specific automation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'The exact ID of the automation to remove (e.g. "auto-1711648231000"). Use this if you know the ID from a previous list_automations call.'
+          },
+          name: {
+            type: 'string',
+            description: 'The name of the automation to remove. If multiple automations share the same name, the first match will be removed.'
+          }
+        },
+        required: []
+      }
+    }
+  }
+];
+
+/**
+ * Combined set of all tools available to the agent.
+ */
+export const allTools: Tool[] = [...bulbTools, ...schedulingTools];
