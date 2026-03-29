@@ -12,6 +12,7 @@ import { resolve } from 'path';
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const allowedUserId = process.env.TELEGRAM_ALLOWED_USER_ID;
 
 /**
  * Starts the Telegram bot listener
@@ -24,9 +25,23 @@ export async function startTelegramBot() {
 
   const bot = new Telegraf(token);
 
+  // Command to help user find their ID
+  bot.command('start', (ctx) => {
+    ctx.reply(`Welcome to Lumina! 👋\n\nYour Telegram User ID is: \`${ctx.from.id}\`\n\nTo restrict access, add this ID to your \`.env.local\` as \`TELEGRAM_ALLOWED_USER_ID=${ctx.from.id}\``, { parse_mode: 'MarkdownV2' });
+  });
+
   bot.on('text', async (ctx) => {
+    const userId = ctx.from.id.toString();
     const input = ctx.message.text;
-    console.log(`[Telegram] Message from ${ctx.from.username || ctx.from.id}: ${input}`);
+
+    // Security Check: Only allow specified user ID if configured
+    if (allowedUserId && userId !== allowedUserId) {
+      console.warn(`[Security] Unauthorized access attempt from ${ctx.from.username || userId}`);
+      // Silently ignore or send a short message
+      return ctx.reply('⚠️ Access Denied. This bot is private.');
+    }
+
+    console.log(`[Telegram] Message from ${ctx.from.username || userId}: ${input}`);
 
     try {
       // Send typing status to make the bot feel responsive
