@@ -99,6 +99,17 @@ config/
 
 ---
 
+## Documentation
+
+For more detailed information on specific features and integrations, please refer to:
+- [**Documentation Index**](docs/integrations.md) — Overview of available features.
+- [**Smart Home Guide**](docs/smart-home.md) — Connect and scan for local hardware.
+- [**Telegram Bot Guide**](docs/telegram.md) — Set up your private AI assistant.
+- [**WebSocket Server Guide**](docs/websocket.md) — Enable real-time communication.
+- [**Cron Scheduler Guide**](docs/cron.md) — Manage automated operations.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
