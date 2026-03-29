@@ -12,7 +12,9 @@ import { resolve } from 'path';
 dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const allowedUserId = process.env.TELEGRAM_ALLOWED_USER_ID;
+const allowedUserIds = process.env.TELEGRAM_ALLOWED_USER_ID 
+  ? process.env.TELEGRAM_ALLOWED_USER_ID.split(',').map(id => id.trim()) 
+  : [];
 
 /**
  * Starts the Telegram bot listener
@@ -27,15 +29,15 @@ export async function startTelegramBot() {
 
   // Command to help user find their ID
   bot.command('start', (ctx) => {
-    ctx.reply(`Welcome to Lumina! 👋\n\nYour Telegram User ID is: \`${ctx.from.id}\`\n\nTo restrict access, add this ID to your \`.env.local\` as \`TELEGRAM_ALLOWED_USER_ID=${ctx.from.id}\``, { parse_mode: 'MarkdownV2' });
+    ctx.reply(`Welcome to Lumina! 👋\n\nYour *numeric* Telegram User ID is: \`${ctx.from.id}\`\n\nTo restrict access, copy and paste this ID into your \`.env.local\`:\n\`TELEGRAM_ALLOWED_USER_ID=${ctx.from.id}\` (or a comma-separated list if multiple users)`, { parse_mode: 'Markdown' });
   });
 
   bot.on('text', async (ctx) => {
     const userId = ctx.from.id.toString();
     const input = ctx.message.text;
 
-    // Security Check: Only allow specified user ID if configured
-    if (allowedUserId && userId !== allowedUserId) {
+    // Security Check: Only allow specified user IDs if configured
+    if (allowedUserIds.length > 0 && !allowedUserIds.includes(userId)) {
       console.warn(`[Security] Unauthorized access attempt from ${ctx.from.username || userId}`);
       // Silently ignore or send a short message
       return ctx.reply('⚠️ Access Denied. This bot is private.');
