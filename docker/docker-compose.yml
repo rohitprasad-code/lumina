@@ -1,0 +1,47 @@
+services:
+  lumina:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: lumina
+    image: debugger612/lumina:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      # Provide your Tuya credentials as environment variables or via .env file
+      - TUYA_ACCESS_ID=${TUYA_ACCESS_ID}
+      - TUYA_ACCESS_SECRET=${TUYA_ACCESS_SECRET}
+      # If running Ollama on the host machine, use the host's IP
+      # On Docker Desktop for Mac/Windows, you can use:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    volumes:
+      # Mount the local directory for development
+      - ..:/app
+      # Avoid overwriting node_modules and .next from the host if they already exist
+      - /app/node_modules
+      - /app/.next
+    # Use host network to allow tinytuya scan to work
+    # network_mode: host
+    restart: always
+
+# Optional: Uncomment if you want to run Ollama in a separate container
+#  ollama:
+#    image: ollama/ollama:latest
+#    container_name: ollama-service
+#    ports:
+#      - "11434:11434"
+#    volumes:
+#      - ollama_data:/root/.ollama
+#    # Use GPU support if available
+#    # deploy:
+#    #   resources:
+#    #     reservations:
+#    #       devices:
+#    #         - driver: nvidia
+#    #           count: 1
+#    #           capabilities: [gpu]
+
+# volumes:
+#   ollama_data:
