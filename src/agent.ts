@@ -90,15 +90,19 @@ export class AgentLoop {
       
       this.messages.push(msg);
 
-      // If there are tool calls, execute them and recurse
+      // If there are tool calls, execute them all in parallel and collect results
       if (msg.tool_calls && msg.tool_calls.length > 0) {
-        for (const tool of msg.tool_calls) {
-          const toolResult = await executeTool(tool);
+        const toolResults = await Promise.all(
+          msg.tool_calls.map(tool => executeTool(tool))
+        );
+
+        for (const result of toolResults) {
           this.messages.push({
             role: 'tool',
-            content: JSON.stringify(toolResult)
+            content: JSON.stringify(result)
           });
         }
+
         return await this.runLoop(); // Recurse to get the final textual response
       }
 
