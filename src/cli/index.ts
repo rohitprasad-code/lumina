@@ -8,6 +8,7 @@ import { join, resolve } from 'path';
 import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'fs';
 import { spawn } from 'child_process';
 import { CONFIG_DIR, PROJECT_ROOT } from '../util/paths';
+import { startWebSocketServer } from '../integrations/websocket';
 import * as dotenv from 'dotenv';
 
 // Load environment variables from .env.local
@@ -186,6 +187,18 @@ program
       await startTelegramBot();
     } catch (error: any) {
       console.error('Telegram Bot Error:', error.message || error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('websocket')
+  .description('Start the WebSocket server listener')
+  .action(async () => {
+    try {
+      await startWebSocketServer();
+    } catch (error: any) {
+      console.error('WebSocket Server Error:', error.message || error);
       process.exit(1);
     }
   });
