@@ -4,9 +4,22 @@ import { executeTool } from './model/tools/executor';
 
 import ora from 'ora';
 
-const DEFAULT_SYSTEM_PROMPT = `
+function buildSystemPrompt(): string {
+  const now = new Date();
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: timezone });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: timezone });
+
+  return `
 You are Lumina, an intelligent assistant that controls smart home devices.
 Use the provided tools to interact with physical hardware.
+
+Current context:
+- Date: ${dateStr}
+- Time: ${timeStr}
+- Timezone: ${timezone}
+
+Use this context to interpret time-based commands intelligently. For example, "set evening mood" should consider the actual current time.
 
 If the user asks you to do something with their lights, immediately use the 'run_bulb_command' tool.
 Do not ask for permission, just execute the tool.
@@ -18,7 +31,8 @@ You can also manage scheduled automations:
 - To LIST/VIEW all automations: use 'list_automations'. Present results in a readable format showing ID, name, schedule, and status. Always include the ID so the user can reference it for removal.
 - To REMOVE/DELETE an automation: use 'remove_automation'. You can match by ID or name. If the user refers to an automation by name, first call list_automations to find the exact ID, then remove it.
 After any automation action, confirm what happened.
-`;
+`.trim();
+}
 
 export class AgentLoop {
   private messages: OllamaMessage[] = [];
@@ -26,11 +40,13 @@ export class AgentLoop {
   constructor() {
     this.messages.push({
       role: 'system',
-      content: DEFAULT_SYSTEM_PROMPT.trim()
+      content: buildSystemPrompt()
     });
   }
 
   public async processUserInput(input: string): Promise<string> {
+    // Refresh the system prompt with the current time on each new user message
+    this.messages[0] = { role: 'system', content: buildSystemPrompt() };
     this.messages.push({ role: 'user', content: input });
     return await this.runLoop();
   }
@@ -74,11 +90,9 @@ export class AgentLoop {
       if (isTyping) {
         console.log(); // Complete the printed line
       } else if (spinner.isSpinning) {
-        // In case it finished without printing text (just tool calls)
         spinner.stop();
       }
 
-      // Reconstruct the message
       const msg: OllamaMessage & { tool_calls?: ToolCall[] } = {
         role: 'assistant',
         content: fullContent
@@ -106,7 +120,6 @@ export class AgentLoop {
         return await this.runLoop(); // Recurse to get the final textual response
       }
 
-      // Return the final text content
       return fullContent || 'Action completed.';
     } catch (e: any) {
       const message = e instanceof Error ? e.message : String(e);
