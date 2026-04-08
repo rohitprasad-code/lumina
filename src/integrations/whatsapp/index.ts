@@ -29,7 +29,7 @@ const allowedJids = process.env.WHATSAPP_ALLOWED_JIDS
   ? process.env.WHATSAPP_ALLOWED_JIDS.split(',').map((j) => j.trim()).filter(Boolean)
   : [];
 
-/** Reconnect delay in ms — increases with each failure to avoid hammering WA servers */
+/** Reconnect delay in ms — doubles with each failure, capped at 30s */
 let reconnectDelay = 2000;
 
 /**
@@ -49,7 +49,7 @@ export async function startWhatsAppBot(): Promise<void> {
     const result = await fetchLatestBaileysVersion();
     version = result.version;
     console.log(`[WhatsApp] Using WA Web version: ${version.join('.')}`);
-  } catch (e) {
+  } catch {
     console.warn('[WhatsApp] Could not fetch latest version, using fallback:', version.join('.'));
   }
 
@@ -73,7 +73,6 @@ export async function startWhatsAppBot(): Promise<void> {
 
   // Handle connection lifecycle + QR display
   sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-    // Display QR code in terminal when Baileys asks us to pair
     if (qr) {
       console.log('\n[WhatsApp] 📱 Scan this QR code (Linked Devices → Link a Device):');
       qrcode.generate(qr, { small: true });
@@ -81,44 +80,58 @@ export async function startWhatsAppBot(): Promise<void> {
 
     if (connection === 'close') {
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-      const isLoggedOut  = statusCode === DisconnectReason.loggedOut;
+      const isLoggedOut = statusCode === DisconnectReason.loggedOut;
 
       if (isLoggedOut) {
         console.log('[WhatsApp] Logged out. Delete config/whatsapp_auth/ and restart to re-link.');
         return;
       }
 
-      // Exponential backoff: 2s → 4s → 8s → cap at 30s
-      console.log(
-        `[WhatsApp] Connection closed (code: ${statusCode}). Reconnecting in ${reconnectDelay / 1000}s…`
-      );
+      console.log(`[WhatsApp] Connection closed (code: ${statusCode}). Reconnecting in ${reconnectDelay / 1000}s…`);
       setTimeout(() => {
         reconnectDelay = Math.min(reconnectDelay * 2, 30000);
         startWhatsAppBot();
       }, reconnectDelay);
 
     } else if (connection === 'open') {
-      reconnectDelay = 2000; // Reset backoff on successful connection
+      reconnectDelay = 2000;
       console.log('[WhatsApp] ✅ Connected and ready!');
+      console.log(`[WhatsApp] sock.user = ${JSON.stringify(sock.user)}`);
       if (allowedJids.length === 0) {
         console.log('[WhatsApp] ⚠️  No allowlist configured — responding to ALL senders.');
-        console.log('[WhatsApp] Set WHATSAPP_ALLOWED_JIDS in .env.local to restrict access.');
       } else {
         console.log(`[WhatsApp] 🔒 Allowlist active — ${allowedJids.length} authorized JID(s).`);
       }
     }
   });
 
+  /**
+   * Track IDs of messages sent by the bot itself.
+   * When we reply, the reply echoes back through messages.upsert with fromMe:true.
+   * We add the sent message ID here so we can skip it on re-entry and avoid loops.
+   */
+  const sentByBot = new Set<string>();
+
   // Handle incoming messages
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    // 'notify' = real-time incoming: skip bulk history sync events
+    // 'notify' = real-time incoming; skip history sync bulk events
     if (type !== 'notify') return;
 
     for (const msg of messages) {
-      if (msg.key.fromMe) continue;   // Skip echoes of our own messages
-      if (!msg.message) continue;     // Skip empty message stubs
-
       const jid = msg.key.remoteJid!;
+      const msgId = msg.key.id ?? '';
+
+      // Debug: trace every event to identify where filtering blocks messages
+      console.log(`[WhatsApp] [debug] event — jid=${jid} fromMe=${msg.key.fromMe} hasMsg=${!!msg.message} id=${msgId}`);
+
+      if (!msg.message) continue; // Skip empty stubs (read receipts, etc.)
+
+      // Skip echoes of messages the bot sent (prevents infinite reply loops)
+      if (sentByBot.has(msgId)) {
+        sentByBot.delete(msgId);
+        console.log(`[WhatsApp] [debug] Skipping bot-sent echo id=${msgId}`);
+        continue;
+      }
 
       // Extract plain text from the most common message types
       const text =
@@ -128,28 +141,45 @@ export async function startWhatsAppBot(): Promise<void> {
         msg.message.ephemeralMessage?.message?.extendedTextMessage?.text ||
         '';
 
-      if (!text.trim()) continue;
-
-      // Security: enforce allowlist if configured
-      if (allowedJids.length > 0 && !allowedJids.includes(jid)) {
-        console.warn(`[WhatsApp] 🚫 Unauthorized message from ${jid} — ignoring.`);
+      if (!text.trim()) {
+        console.log(`[WhatsApp] [debug] Skipping — no text content. Keys: ${Object.keys(msg.message).join(', ')}`);
         continue;
       }
 
-      console.log(`[WhatsApp] 📩 From ${jid}: ${text}`);
+      // Normalize JID to numeric part only — handles @s.whatsapp.net AND @lid formats
+      const normalizeJid = (j: string) => j.split('@')[0];
+      const normalizedIncoming = normalizeJid(jid);
+
+      // Allowlist check:
+      // - fromMe messages are YOUR OWN commands — always allow regardless of JID format
+      // - fromMe:false messages from others are checked against the allowlist
+      if (!msg.key.fromMe && allowedJids.length > 0) {
+        const isAllowed = allowedJids.some(
+          (allowed) => normalizeJid(allowed) === normalizedIncoming
+        );
+        if (!isAllowed) {
+          console.warn(`[WhatsApp] 🚫 Unauthorized from ${jid}`);
+          console.warn(`[WhatsApp]    Tip: add "${jid}" to WHATSAPP_ALLOWED_JIDS in .env.local`);
+          continue;
+        }
+      }
+
+      console.log(`[WhatsApp] 📩 From ${jid}${msg.key.fromMe ? ' [self]' : ''}: ${text}`);
 
       // Show "typing…" indicator while the agent is thinking
       await sock.sendPresenceUpdate('composing', jid);
 
       try {
         const response = await handleMessage(text);
-        await sock.sendMessage(jid, { text: response });
+        const sent = await sock.sendMessage(jid, { text: response });
+        if (sent?.key.id) sentByBot.add(sent.key.id);
         console.log(`[WhatsApp] ✉️  Replied to ${jid}`);
       } catch (err) {
         console.error('[WhatsApp] Error handling message:', err);
-        await sock.sendMessage(jid, {
+        const errSent = await sock.sendMessage(jid, {
           text: '⚠️ Sorry, I encountered an error. Please try again.',
         });
+        if (errSent?.key.id) sentByBot.add(errSent.key.id);
       } finally {
         await sock.sendPresenceUpdate('paused', jid);
       }
