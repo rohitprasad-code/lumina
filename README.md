@@ -8,10 +8,10 @@
 ## Architecture Overview
 
 ```
-     ┌─────────────────────────────┐            ┌─────────────────────┐
-     │             CLI             │            │      Telegram       │
-     │   parse args → detect mode  │            │      WhatsApp       │
-     └────────┬─────────────────┬──┘            └──────────┬──────────┘
+     ┌─────────────────────────────┐            ┌──────────────────────────┐
+     │             CLI             │            │ Telegram | WhatsApp | WS │
+     │   parse args → detect mode  │            │      Cron Scheduler      │
+     └────────┬─────────────────┬──┘            └──────────┬───────────────┘
               │                 |                          │
               │  bulb on        │ bulb -m "light on karna" │
               │                 │                          │
@@ -51,12 +51,12 @@
 
 |              | Direct lane          | AI (message) lane               |
 | ------------ | -------------------- | ------------------------------- |
-| Entry        | `bulb on`            | `bulb -m "dim the lights"`      |
+| Entry        | `lumina-cli bulb on`    | `lumina-cli bulb -m "dim the lights"`|
 | Parsed by    | Command parser       | Message router → Ollama         |
 | Intelligence | None — exact command | LLM decides which tools to call |
 | Latency      | ~100ms               | ~1–3s (LLM round-trip)          |
 | Multi-step   | No                   | Yes — chains multiple tools     |
-| Sources      | CLI only             | CLI `-m`, Telegram, WhatsApp    |
+| Sources      | CLI only             | CLI `-m`, Telegram, WhatsApp, WebSocket |
 
 ---
 
@@ -64,10 +64,10 @@
 
 ```bash
 # Direct lane — fast, exact
-bulb on | off | brightness 70 | scene movie | status
+lumina-cli bulb on | off | brightness 70 | scene movie | status
 
 # AI lane — natural language
-bulb -m "dim to 30 percent and make it warm"
+lumina-cli bulb -m "dim to 30 percent and make it warm"
 ```
 
 ---
@@ -76,15 +76,19 @@ bulb -m "dim to 30 percent and make it warm"
 
 ```
 src/
-  index.ts          # CLI entry — mode detection
+  cli/
+    index.ts        # CLI entry — mode detection
   agent.ts          # Ollama chat loop + tool dispatch
   types.ts          # Shared interfaces
-  tools/            # Tool schemas (definitions.ts) + dispatcher (executor.ts)
-  integrations/     # Message router, Telegram & WhatsApp (planned)
+  model/
+    tools/          # Tool schemas (definitions.ts) + dispatcher (executor.ts)
+  integrations/     # Message router, Telegram, WhatsApp, WebSocket listeners
+  service/          # Cron scheduler and long-running services
 scripts/
   bulb_control.py   # TinyTuya LAN controller
 config/
   scenes.json       # Scene presets
+  automations.json  # Scheduled automations
 ```
 
 ---
@@ -94,8 +98,8 @@ config/
 - **Phase 1 — IoT control** ✅ Bulb paired, TinyTuya verified
 - **Phase 2 — CLI direct lane** ✅ Arg parsing, command execution
 - **Phase 3 — AI message lane** ✅ Ollama loop, multi-tool chaining, `-m` flag
-- **Phase 4 — Telegram & WhatsApp** 🔜 Bot listeners, message routing, per-user history
-- **Phase 5 — Automation** 🔜 Cron scenes, sunset-aware, CI/CD indicator, voice input
+- **Phase 4 — Telegram & WhatsApp** ✅ Bot listeners, message routing, unified start
+- **Phase 5 — Automation** 🔜 Cron scenes, sunset-aware, CI/CD indicator
 
 ---
 
