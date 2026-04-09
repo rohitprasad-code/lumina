@@ -73,3 +73,11 @@ export async function startTelegramBot() {
 
   console.log('Bot is running in long-polling mode...');
 }
+
+// Entry point — invoked when run directly
+if (require.main === module || process.argv[1]?.endsWith('telegram/index.ts')) {
+  startTelegramBot().catch((err) => {
+    console.error('[Telegram] Fatal startup error:', err);
+    process.exit(1);
+  });
+}
