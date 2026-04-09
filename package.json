@@ -12,7 +12,10 @@
     "lint": "eslint",
     "cli": "npx tsx src/cli/index.ts",
     "whatsapp": "npx tsx src/integrations/whatsapp/index.ts",
-    "telegram": "npx tsx src/integrations/telegram/index.ts"
+    "telegram": "npx tsx src/integrations/telegram/index.ts",
+    "websocket": "npx tsx src/integrations/websocket/index.ts",
+    "cron": "npx tsx src/service/runner.ts",
+    "start:all": "npx concurrently -c \"bgBlue.bold,bgMagenta.bold,bgCyan.bold,bgGreen.bold\" \"npm run whatsapp\" \"npm run telegram\" \"npm run websocket\" \"npm run cron\""
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",

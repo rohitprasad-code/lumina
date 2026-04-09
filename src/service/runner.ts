@@ -12,8 +12,9 @@ async function main() {
       console.error(`❌ Reload Error: ${message}`);
     });
   });
+  // Keep the process alive even if there are no cron tasks yet
+  setInterval(() => {}, 1000 * 60 * 60);
 
-  // Keep the process alive
   // node-cron tasks will keep the event loop alive, but we can also handle graceful shutdown
   process.on('SIGINT', () => {
     console.log('\n🛑 Stopping Cron Service...');
