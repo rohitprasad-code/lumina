@@ -46,10 +46,18 @@ echo -e "${GREEN}Python requirements installed in .venv.${NC}"
 echo -e "${BLUE}4/6 Registering lumina-cli...${NC}"
 chmod +x src/cli/index.ts
 
-# 5. Setup .env.local file
-echo "TUYA_ACCESS_ID=" >> .env.local
-echo "TUYA_ACCESS_SECRET=" >> .env.local
-echo -e "${GREEN}.env.local created${NC}"
+echo -e "${BLUE}5/6 Setting up .env.local file...${NC}"
+if [ ! -f .env.local ]; then
+    echo "TUYA_ACCESS_ID=" > .env.local
+    echo "TUYA_ACCESS_SECRET=" >> .env.local
+    echo "TELEGRAM_BOT_TOKEN=" >> .env.local
+    echo "TELEGRAM_ALLOWED_USER_ID=" >> .env.local
+    echo "WHATSAPP_ALLOWED_JIDS=" >> .env.local
+    echo "WEBSOCKET_PORT=8080" >> .env.local
+    echo -e "${GREEN}.env.local created. Please populate it with your tokens.${NC}"
+else
+    echo -e "${YELLOW}.env.local already exists, skipping creation.${NC}"
+fi
 
 # 6. Final Steps
 echo -e "${YELLOW}Final Step: Global Access${NC}"
@@ -61,4 +69,5 @@ echo -e "${GREEN}SUCCESS! Lumina setup is complete.${NC}"
 echo -e "You can now run commands using:"
 echo -e "1. ${BLUE}./src/cli/index.ts bulb on${NC}"
 echo -e "2. ${BLUE}npm run cli -- bulb on${NC}"
-echo -e "3. ${BLUE}lumina-cli bulb on${NC} (after linking)"
+echo -e "3. ${BLUE}npm run start:all${NC} (Runs Telegram, WhatsApp, WebSocket & Cron)"
+echo -e "4. ${BLUE}lumina-cli bulb on${NC} (after linking)"
