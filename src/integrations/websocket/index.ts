@@ -93,3 +93,11 @@ export async function startWebSocketServer() {
     wss.close();
   });
 }
+
+// Entry point — invoked when run directly
+if (require.main === module || process.argv[1]?.endsWith('websocket/index.ts')) {
+  startWebSocketServer().catch((err) => {
+    console.error('[WebSocket] Fatal startup error:', err);
+    process.exit(1);
+  });
+}
