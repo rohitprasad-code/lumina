@@ -61,3 +61,18 @@ export async function scanDevices() {
     process.exit(1);
   }
 }
+
+export async function executeCommandOnMultiple(
+  devices: any[],
+  command: string,
+  value?: string,
+  options: { json?: boolean } = {}
+) {
+  const promises = devices.map(device => {
+    return runBulbCommand(command, value, { ...options, device: device.id })
+      .then(result => ({ device, success: true, result }))
+      .catch(error => ({ device, success: false, error }));
+  });
+
+  return Promise.all(promises);
+}

@@ -101,16 +101,22 @@ program
         process.exit(1);
       }
 
-      // In Step 4 we will enable concurrent Promise.all execution, for now we run sequentially
-      for (const dev of targetDevices) {
-        console.log(`Sending '${actionToRun}' to ${dev.name}...`);
-        const result = await runBulbCommand(actionToRun, actionValue, { ...options, device: dev.id });
-        if (options.json) {
-          console.log(JSON.stringify(result, null, 2));
+      // Execute requested actions in parallel
+      console.log(`Sending '${actionToRun}' to ${targetDevices.length} device(s) concurrently...`);
+      const { executeCommandOnMultiple } = await import('../util/tinytuya');
+      const results = await executeCommandOnMultiple(targetDevices, actionToRun, actionValue, options);
+      
+      results.forEach(({ device, success, result, error }) => {
+        if (success) {
+          if (options.json) {
+            console.log(JSON.stringify({ device: device.name, result }, null, 2));
+          } else {
+            console.log(`✅ [${device.name}]: Actions pushed successfully.`);
+          }
         } else {
-           console.log(result);
+          console.error(`❌ [${device.name}] Error:`, error?.message || String(error));
         }
-      }
+      });
 
     } catch (error: any) {
       console.error(error.message || String(error));
