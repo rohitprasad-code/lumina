@@ -21,14 +21,17 @@ const program = new Command();
 program
   .name("lumina-cli")
   .description("CLI to control smart bulbs and other devices")
-  .option(
-    "-m, --message <text>",
-    "natural language message to control the device",
-  )
+  .argument('[arg1]', 'Primary command (action or type)')
+  .argument('[arg2]', 'Target name or action')
+  .argument('[arg3]', 'Target action if resolving by specific name')
+  .argument('[arg4]', 'Optional value for action')
+  .option("-m, --message <text>", "natural language message to control the device")
   .option("-d, --device <name>", "specific device ID or name")
   .option("-s, --scan", "scan for devices")
+  .option("-a, --all", "apply to all devices bypass prompt")
+  .option("-j, --json", "Output results as JSON")
   .version("0.1.0")
-  .action(async (options) => {
+  .action(async (arg1, arg2, arg3, arg4, options) => {
     if (options.scan) {
       await scanDevices();
       return;
@@ -37,51 +40,80 @@ program
     if (options.message) {
       const target = options.device ? ` for device: ${options.device}` : "";
       console.log(`> Processing message: "${options.message}"${target}\n`);
-
       const response = await handleMessage(options.message);
       console.log(`\n> Lumina: ${response}`);
-    } else {
-      program.help();
+      return;
     }
-  });
 
-program
-  .command("bulb")
-  .description("Control smart bulbs")
-  .argument(
-    "[action]",
-    "Action to perform (on, off, toggle, status, brightness, color)",
-  )
-  .argument("[value]", "Value for brightness (1-100) or color (hex)")
-  .option("-d, --device <name>", "Specific device ID or Name")
-  .option("-j, --json", "Output results as JSON")
-  .option(
-    "-m, --message <text>",
-    "Natural language message to control the bulb",
-  )
-  .action(async (action, value, options) => {
+    if (!arg1) {
+      program.help();
+      return;
+    }
+
+    const { resolveGlobalConflict } = await import('./prompt');
+    const { registry } = await import('../service/registry');
+
+    const validActions = ['on', 'off', 'toggle', 'status', 'brightness', 'color'];
+    let targetDevices: any[] = [];
+    let actionToRun = '';
+    let actionValue = '';
+
     try {
-      if (options.message) {
-        console.log(`Processing message: "${options.message}"\n`);
-        const response = await handleMessage(options.message);
-        console.log(`\n> Lumina: ${response}`);
-        return;
+      if (validActions.includes(arg1)) {
+        actionToRun = arg1;
+        actionValue = arg2 || '';
+        
+        if (options.all) {
+          targetDevices = registry.getAllDevices();
+        } else {
+          const resolution = await resolveGlobalConflict(arg1);
+          if (!resolution) process.exit(0);
+
+          if (resolution.type === 'all') {
+            targetDevices = registry.getAllDevices();
+          } else if (resolution.type === 'category') {
+            targetDevices = registry.getDevicesByType(resolution.category);
+          } else if (resolution.type === 'device') {
+            const dev = registry.getDeviceByIdOrName(resolution.deviceId);
+            if (dev) targetDevices = [dev];
+          }
+        }
+      } else {
+        if (arg2 && validActions.includes(arg2)) {
+          // lumina bulb off
+          actionToRun = arg2;
+          actionValue = arg3 || '';
+          targetDevices = registry.getDevicesByType(arg1);
+        } else if (arg2 && arg3 && validActions.includes(arg3)) {
+          // lumina bulb "Living Room" off
+          actionToRun = arg3;
+          actionValue = arg4 || '';
+          const dev = registry.getDeviceByIdOrName(arg2);
+          if (dev) targetDevices = [dev];
+        } else {
+          console.error(`Invalid command format. Action must be one of: ${validActions.join(', ')}`);
+          process.exit(1);
+        }
       }
 
-      if (!action) {
-        console.error("error: missing required argument 'action'");
+      if (targetDevices.length === 0) {
+        console.error('No matching devices found to apply the command.');
         process.exit(1);
       }
 
-      const result = await runBulbCommand(action, value, options);
-      if (options.json) {
-        console.log(JSON.stringify(result, null, 2));
-      } else {
-        console.log(result);
+      // In Step 4 we will enable concurrent Promise.all execution, for now we run sequentially
+      for (const dev of targetDevices) {
+        console.log(`Sending '${actionToRun}' to ${dev.name}...`);
+        const result = await runBulbCommand(actionToRun, actionValue, { ...options, device: dev.id });
+        if (options.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+           console.log(result);
+        }
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(message);
+
+    } catch (error: any) {
+      console.error(error.message || String(error));
       process.exit(1);
     }
   });
