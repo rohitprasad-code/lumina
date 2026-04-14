@@ -106,14 +106,16 @@ program
       const { executeCommandOnMultiple } = await import('../util/tinytuya');
       const results = await executeCommandOnMultiple(targetDevices, actionToRun, actionValue, options);
       
-      results.forEach(({ device, success, result, error }) => {
-        if (success) {
+      results.forEach((res) => {
+        if (res.success) {
+          const { device, result } = res as { device: any, result: any, success: true };
           if (options.json) {
             console.log(JSON.stringify({ device: device.name, result }, null, 2));
           } else {
             console.log(`✅ [${device.name}]: Actions pushed successfully.`);
           }
         } else {
+          const { device, error } = res as { device: any, error: any, success: false };
           console.error(`❌ [${device.name}] Error:`, error?.message || String(error));
         }
       });
