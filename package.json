@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
+    "@inquirer/prompts": "^8.4.1",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
