@@ -41,6 +41,7 @@ let reconnectDelay = 2000;
  * Subsequent runs: session is restored from AUTH_FOLDER automatically.
  */
 export async function startWhatsAppBot(): Promise<void> {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
 
   // Fetch the latest WA Web version dynamically so the version never goes stale
@@ -54,8 +55,11 @@ export async function startWhatsAppBot(): Promise<void> {
   }
 
   // Silent logger — keeps Baileys internals out of the console
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const logger = (P as any).default
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? (P as any).default({ level: 'silent' })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     : (P as any)({ level: 'silent' });
 
   const sock = makeWASocket({

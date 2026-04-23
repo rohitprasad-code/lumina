@@ -1,7 +1,6 @@
 #!/usr/bin/env npx tsx
 import { Command } from "commander";
-import { runBulbCommand, scanDevices } from "../util/tinytuya";
-import { AgentLoop } from "../agent";
+import { scanDevices } from "../util/tinytuya";
 import { handleMessage } from '../integrations/router';
 import { startTelegramBot } from '../integrations/telegram';
 import { join, resolve } from 'path';
@@ -54,7 +53,7 @@ program
     const { registry } = await import('../service/registry');
 
     const validActions = ['on', 'off', 'toggle', 'status', 'brightness', 'color'];
-    let targetDevices: any[] = [];
+    let targetDevices: import('../service/registry').TuyaDevice[] = [];
     let actionToRun = '';
     let actionValue = '';
 
@@ -108,20 +107,20 @@ program
       
       results.forEach((res) => {
         if (res.success) {
-          const { device, result } = res as { device: any, result: any, success: true };
+          const { device, result } = res as { device: { name: string }, result: unknown, success: true };
           if (options.json) {
             console.log(JSON.stringify({ device: device.name, result }, null, 2));
           } else {
             console.log(`✅ [${device.name}]: Actions pushed successfully.`);
           }
         } else {
-          const { device, error } = res as { device: any, error: any, success: false };
-          console.error(`❌ [${device.name}] Error:`, error?.message || String(error));
+          const { device, error } = res as { device: { name: string }, error: unknown, success: false };
+          console.error(`❌ [${device.name}] Error:`, error instanceof Error ? error.message : String(error));
         }
       });
 
-    } catch (error: any) {
-      console.error(error.message || String(error));
+    } catch (error: unknown) {
+      console.error(error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });
@@ -225,8 +224,8 @@ program
   .action(async () => {
     try {
       await startTelegramBot();
-    } catch (error: any) {
-      console.error('Telegram Bot Error:', error.message || error);
+    } catch (error: unknown) {
+      console.error('Telegram Bot Error:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });
@@ -237,8 +236,8 @@ program
   .action(async () => {
     try {
       await startWebSocketServer();
-    } catch (error: any) {
-      console.error('WebSocket Server Error:', error.message || error);
+    } catch (error: unknown) {
+      console.error('WebSocket Server Error:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   });

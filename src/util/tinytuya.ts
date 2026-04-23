@@ -63,7 +63,7 @@ export async function scanDevices() {
 }
 
 export async function executeCommandOnMultiple(
-  devices: any[],
+  devices: { id: string, name?: string }[],
   command: string,
   value?: string,
   options: { json?: boolean } = {}

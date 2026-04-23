@@ -18,7 +18,7 @@ export interface TuyaDevice {
   ip: string;
   version: string;
   // Let mapping be an arbitrary object for now to avoid bloated typings
-  mapping?: Record<string, any>;
+  mapping?: Record<string, unknown>;
 }
 
 export class DeviceRegistry {

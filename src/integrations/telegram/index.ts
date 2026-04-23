@@ -60,7 +60,7 @@ export async function startTelegramBot() {
     }
   });
 
-  bot.catch((err: any, ctx) => {
+  bot.catch((err: unknown, ctx) => {
     console.error(`[Telegram] Error for ${ctx.updateType}:`, err);
   });
 

@@ -121,7 +121,7 @@ export class AgentLoop {
       }
 
       return fullContent || 'Action completed.';
-    } catch (e: any) {
+    } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       console.error('\nLumina Error:', message);
       return `Error: ${message || 'An unexpected error occurred.'}`;
