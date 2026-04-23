@@ -15,7 +15,8 @@
     "telegram": "npx tsx src/integrations/telegram/index.ts",
     "websocket": "npx tsx src/integrations/websocket/index.ts",
     "cron": "npx tsx src/service/runner.ts",
-    "start:all": "npx concurrently -c \"bgBlue.bold,bgMagenta.bold,bgCyan.bold,bgGreen.bold\" \"npm run whatsapp\" \"npm run telegram\" \"npm run websocket\" \"npm run cron\""
+    "start:all": "npx concurrently -c \"bgBlue.bold,bgMagenta.bold,bgCyan.bold,bgGreen.bold\" \"npm run whatsapp\" \"npm run telegram\" \"npm run websocket\" \"npm run cron\"",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
@@ -45,6 +46,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "husky": "^9.1.7",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
