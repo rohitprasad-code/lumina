@@ -21,8 +21,10 @@
     "@hapi/boom": "^10.0.1",
     "@inquirer/prompts": "^8.4.1",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "clsx": "^2.1.1",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
+    "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0",
     "next": "16.2.1",
     "node-cron": "^4.2.1",
@@ -31,6 +33,7 @@
     "qrcode-terminal": "^0.12.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "tailwind-merge": "^3.5.0",
     "telegraf": "^4.16.3",
     "ws": "^8.20.0"
   },
